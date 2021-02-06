@@ -1,6 +1,7 @@
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Scanner;
 
 
 @FunctionalInterface
@@ -30,27 +31,59 @@ public class CoinMaker {
 		coinMaker.configureCoins();
 
 
-	    System.out.println("lambda");
-		System.out.println("AFTER Config valueAllCoins = " + 
-		coinMaker.ref.verifyCoins());
+		System.out.println("Configuration Complete...");
+		System.out.println("Machine contains coins with total value of: " + 
+			coinMaker.ref.verifyCoins());
 		
+		Scanner scanner = new Scanner(System.in);
 		
-		Float billAmount = 48.0f;
-		coinMaker.ref2.convertToCoins(billAmount);
-
-		// 2nd run
-		billAmount = 3.0f;
-		coinMaker.ref2.convertToCoins(billAmount);
+		while(true) {
+			System.out.println("");
+			System.out.println("Enter amount that you wish to convert to change: ");
+	
+			Integer billInteger = 0;
+			try {
+				billInteger = Integer.valueOf(scanner.nextLine());
+			} catch(NumberFormatException nfe) {
+				System.out.println("Invalid amount. " + 
+					"Amount must be an Integer (only bills)");
+				continue;
+			}
+			
+			/* We want the billAmount to be a Float, as it propagates
+			 * through the logic. This is so change can be subtracted.
+			 */
+			Float billAmount = Float.valueOf(billInteger);
+			
+			try {
+				coinMaker.ref2.convertToCoins(billAmount);
+			} catch(IllegalStateException ex) {
+				// exception already logged
+				continue;
+			}
+		
+			System.out.println("COIN CHANGE PROVIDED");
+			
+			Integer totalCoinsLeft = coinMaker.coinsMap.values().stream()
+				.reduce(0, Integer::sum);
+			
+			if(totalCoinsLeft == 0) {
+				System.out.println("");
+				System.out.println("Machine is out of Coins");
+				System.out.println("");
+				System.out.println("");
+				break;
+			}
+		}
 	}
 	
 	private void configureCoins() {
 
 		// TODO: handle float type better (don't use 'f')
-
-		this.coinsMap.put(0.25f, 125);
-		this.coinsMap.put(0.10f, 110);
-		this.coinsMap.put(0.05f, 105);
-		this.coinsMap.put(0.01f, 101);		
+		this.coinsMap.put(0.25f, 100);
+		this.coinsMap.put(0.10f, 100);
+		this.coinsMap.put(0.05f, 100);
+		this.coinsMap.put(0.01f, 100);		
 	}
 	
 	private CoinVerifyInterface ref = () -> {
@@ -75,6 +108,21 @@ public class CoinMaker {
 		System.out.println("");
 		System.out.println("billAmount = " + billAmount);
 		System.out.println("");
+
+		/* Check whether machine has enough coins.
+		 * TODO: This aggregator could also be a lambda.
+		 */
+		Float totalCoinValueInMachine = 0.0f;
+		for(Entry<Float, Integer> coinEntry : coinsMap.entrySet()) {
+			
+			totalCoinValueInMachine += 
+				coinEntry.getKey() * coinEntry.getValue();
+		}
+		if(billAmount > totalCoinValueInMachine) {
+			System.out.println("ERROR: Machine does not have enough coins " +
+					"to make change for this amount.");
+			throw new IllegalStateException();
+		}
 		
 		for(Entry<Float, Integer> coinEntry : coinsMap.entrySet()) {
 			
@@ -110,22 +158,10 @@ public class CoinMaker {
 				coinEntry.setValue((int) (coinEntry.getValue() - coinsUsed));
 			}
 
-			System.out.println("AFTER LOOP ITERATION, there are [" + 
+			System.out.println("there are now [" + 
 			coinEntry.getValue() +
 			"] coins of size [" + 
 			coinEntry.getKey() + "]");
-		}
-
-		Integer totalCoinsLeft = 0;
-		for(Entry<Float, Integer> coinEntry : coinsMap.entrySet()) {
-			totalCoinsLeft += coinEntry.getValue();
-		}
-
-		if(totalCoinsLeft == 0) {
-			System.out.println("");
-			System.out.println("Machine is out of Coins");
-			System.out.println("");
-			System.out.println("");
 		}
  	};
 }
